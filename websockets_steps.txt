@@ -1,0 +1,149 @@
+Steps
+	1)	How to setup the websocket server
+	2)	Configure laravel to talk to websocket server (on php end)
+	3)	Set up laravel eco on the client side and talk about how to connect to new server
+
+
+////////////////////////////////////////////////////////////////////////////
+
+=====================================
+1)	How to setup the websocket server
+=====================================
+
+Reference link: https://docs.beyondco.de/laravel-websockets/1.0/getting-started/installation.html
+
+Create a new laravel project
+	$ composer create-project --prefer-dist laravel/laravel websockets
+
+Go inside "websockets" directory
+	$ cd websockets
+
+Install Laravel WebSocket
+	$ composer require beyondcode/laravel-websockets
+
+Publish migration files
+	$ php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="migrations"
+
+Publish WebSocket configuration file
+	$ php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="config"
+
+Configure .env file
+
+	APP_URL=http://localhost
+
+	BROADCAST_DRIVER=pusher
+
+	PUSHER_APP_ID=12345
+	PUSHER_APP_KEY=ABCDEFG
+	PUSHER_APP_SECRET=HIJKLMNOP
+
+Run migration
+	$ php artisan migrate
+
+Run server
+	$ php artisan websockets:serve
+
+For socket server dashboard
+	http://localhost/test/websockets/public/laravel-websockets
+	OR
+	http://127.0.0.1:8000/laravel-websockets
+
+
+////////////////////////////////////////////////////////////////////////////
+
+==============================================================
+2)	Configure laravel to talk to websocket server (on php end)
+==============================================================
+
+We are going to bring pusher php package
+	$ composer require pusher/pusher-php-server "~3.0"
+
+Update configuration file "config/broadcasting.php"
+	'pusher' => [
+        'driver' => 'pusher',
+        'key' => env('PUSHER_APP_KEY'),
+        'secret' => env('PUSHER_APP_SECRET'),
+        'app_id' => env('PUSHER_APP_ID'),
+        'options' => [
+            'cluster' => env('PUSHER_APP_CLUSTER'),
+            // 'encrypted' => true,
+            'host' => '127.0.0.1',
+            'port' => 6001,
+            'scheme' => 'http'
+        ],
+    ],
+
+Create an event
+	$ php artisan make:event NewMessage
+
+Implement this newly created event, add "$message" in constructor arguments and give some name to the channel
+	namespace App\Events;
+
+	use Illuminate\Broadcasting\Channel;
+	use Illuminate\Queue\SerializesModels;
+	use Illuminate\Broadcasting\PrivateChannel;
+	use Illuminate\Broadcasting\PresenceChannel;
+	use Illuminate\Foundation\Events\Dispatchable;
+	use Illuminate\Broadcasting\InteractsWithSockets;
+	use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+
+	class NewMessage implements ShouldBroadcast
+	{
+	    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+	    public $message;
+
+	    /**
+	     * Create a new event instance.
+	     *
+	     * @return void
+	     */
+	    public function __construct($message)
+	    {
+	        $this->message = $message;
+	    }
+
+	    /**
+	     * Get the channels the event should broadcast on.
+	     *
+	     * @return \Illuminate\Broadcasting\Channel|array
+	     */
+	    public function broadcastOn()
+	    {
+	        return new Channel('home');
+	    }
+	}
+
+Run server again
+	$ php artisan websockets:serve
+
+Let's trigger new event. Go inside termimal, use tinker and run
+	event(new App\Events\NewMessage("Hello World"))
+
+////////////////////////////////////////////////////////////////////////////
+
+=====================================================================================
+3)	Set up laravel eco on the client side and talk about how to connect to new server
+=====================================================================================
+In 3rd part, we will set up clients. For that we are going to use laravel echo javascript library
+
+Run
+	$ npm install
+
+We need to install 2 packages
+	1) laravel-echo
+	2) pusher-js
+
+Run
+	$ npm install laravel-echo pusher-js
+
+Go to "resources/js/bootstrap.js" and configure laravel-echo inside it
+
+Now, compile javascript file
+	$ npm run dev
+
+Add js/app.js inside view file and required javascript
+
+////////////////////////////////////////////////////////////////////////////
+
+D:\localhost\htdocs\test\websockets\config\websockets.php
